@@ -1,0 +1,27 @@
+From 852f3afee47db381ec15bf293377b1b7b2e9821c Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Sat, 23 Sep 2023 09:00:12 +0000
+Subject: [PATCH libX11] Correctly handle XTHREADLIB for Android
+
+Android libc includes pthread and attempting to link it explicitly
+via -lpthread isn't valid therefore was replaced.
+---
+ configure.ac | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/configure.ac b/configure.ac
+index 045dbb87..bc8eb04e 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -225,6 +225,8 @@ esac
+ # XXX incomplete, please fill this in
+ if test x$xthreads = xyes ; then
+     case $host_os in
++	linux-android*)
++	    XTHREADLIB="" ;;
+     linux*|gnu*|k*bsd*-gnu)
+         XTHREADLIB=-lpthread ;;
+     netbsd*)
+-- 
+2.39.2
+

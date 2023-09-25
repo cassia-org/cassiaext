@@ -1,0 +1,84 @@
+[submodule "gamescope"]
+	path = gamescope
+	url = git@github.com:cassia-org/gamescope.git
+[submodule "deps/libx11"]
+	path = deps/libx11
+	url = https://gitlab.freedesktop.org/xorg/lib/libx11.git
+[submodule "deps/xorgproto"]
+	path = deps/xorgproto
+	url = https://gitlab.freedesktop.org/xorg/proto/xorgproto.git
+[submodule "deps/libxcb"]
+	path = deps/libxcb
+	url = https://gitlab.freedesktop.org/xorg/lib/libxcb.git
+[submodule "deps/xcbproto"]
+	path = deps/xcbproto
+	url = https://gitlab.freedesktop.org/xorg/proto/xcbproto.git
+[submodule "deps/libxau"]
+	path = deps/libxau
+	url = https://gitlab.freedesktop.org/xorg/lib/libxau.git
+[submodule "deps/wayland"]
+	path = deps/wayland
+	url = https://gitlab.freedesktop.org/wayland/wayland.git
+[submodule "deps/libffi"]
+	path = deps/libffi
+	url = https://github.com/libffi/libffi.git
+[submodule "deps/libexpat"]
+	path = deps/libexpat
+	url = https://github.com/libexpat/libexpat.git
+[submodule "deps/libxdamage"]
+	path = deps/libxdamage
+	url = https://gitlab.freedesktop.org/xorg/lib/libxdamage.git
+[submodule "deps/libxfixes"]
+	path = deps/libxfixes
+	url = https://gitlab.freedesktop.org/xorg/lib/libxfixes.git
+[submodule "deps/libxcomposite"]
+	path = deps/libxcomposite
+	url = https://gitlab.freedesktop.org/xorg/lib/libxcomposite.git
+[submodule "deps/libxrender"]
+	path = deps/libxrender
+	url = https://gitlab.freedesktop.org/xorg/lib/libxrender.git
+[submodule "deps/libxext"]
+	path = deps/libxext
+	url = https://gitlab.freedesktop.org/xorg/lib/libxext.git
+[submodule "deps/libxxf86vm"]
+	path = deps/libxxf86vm
+	url = https://gitlab.freedesktop.org/xorg/lib/libxxf86vm.git
+[submodule "deps/libxtst"]
+	path = deps/libxtst
+	url = https://gitlab.freedesktop.org/xorg/lib/libxtst.git
+[submodule "deps/libxi"]
+	path = deps/libxi
+	url = https://gitlab.freedesktop.org/xorg/lib/libxi
+[submodule "deps/libxres"]
+	path = deps/libxres
+	url = https://gitlab.freedesktop.org/xorg/lib/libxres.git
+[submodule "deps/libxmu"]
+	path = deps/libxmu
+	url = https://gitlab.freedesktop.org/xorg/lib/libxmu.git
+[submodule "deps/libxt"]
+	path = deps/libxt
+	url = https://gitlab.freedesktop.org/xorg/lib/libxt.git
+[submodule "deps/libsm"]
+	path = deps/libsm
+	url = https://gitlab.freedesktop.org/xorg/lib/libsm.git
+[submodule "deps/libice"]
+	path = deps/libice
+	url = https://gitlab.freedesktop.org/xorg/lib/libice.git
+[submodule "deps/libxtrans"]
+	path = deps/libxtrans
+	url = https://gitlab.freedesktop.org/xorg/lib/libxtrans.git
+[submodule "deps/libxkbcommon"]
+	path = deps/libxkbcommon
+	url = https://github.com/xkbcommon/libxkbcommon.git
+[submodule "deps/wayland-protocols"]
+	path = deps/wayland-protocols
+	url = https://gitlab.freedesktop.org/wayland/wayland-protocols.git
+[submodule "deps/libxml2"]
+	path = deps/libxml2
+	url = https://gitlab.gnome.org/GNOME/libxml2.git
+[submodule "deps/SDL"]
+	path = deps/SDL
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "deps/pixman"]
+	path = deps/pixman
+	url = https://gitlab.freedesktop.org/pixman/pixman.git

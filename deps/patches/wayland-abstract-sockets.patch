@@ -1,0 +1,186 @@
+From 3051558a2793384467c11226f4ea8fffa6818e1a Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Sat, 23 Sep 2023 12:05:21 +0000
+Subject: [PATCH] server,client: Use abstract sockets on Android
+
+Android doesn't supported named sockets due to SELinux restrictions
+so abstract sockets are used as an alternative, it should be noted
+that this compromises the security as socket access isn't restricted
+to only applications which can access XDG_RUNTIME_DIR.
+
+Signed-off-by: Mark Collins <pixelyion@protonmail.com>
+---
+ src/wayland-client.c | 22 ++++++++++++++++------
+ src/wayland-server.c | 44 ++++++++++++++++++++++++++++++++++----------
+ 2 files changed, 50 insertions(+), 16 deletions(-)
+
+diff --git a/src/wayland-client.c b/src/wayland-client.c
+index 105f9be..daf706a 100644
+--- a/src/wayland-client.c
++++ b/src/wayland-client.c
+@@ -1097,7 +1097,8 @@ connect_to_socket(const char *name)
+ 	struct sockaddr_un addr;
+ 	socklen_t size;
+ 	const char *runtime_dir;
+-	int name_size, fd;
++	char *sun_path;
++	int name_size, max_name_size, fd;
+ 	bool path_is_absolute;
+ 
+ 	if (name == NULL)
+@@ -1120,27 +1121,36 @@ connect_to_socket(const char *name)
+ 	if (fd < 0)
+ 		return -1;
+ 
++	sun_path = addr.sun_path;
++	max_name_size = sizeof(addr.sun_path);
++#ifdef __ANDROID__
++	/* Android requires abstract sockets which prefix the path with '\0'
++	 * which we rely on memset to do after adjusting sun_path */
++	sun_path++;
++	max_name_size--;
++#endif
++
+ 	memset(&addr, 0, sizeof addr);
+ 	addr.sun_family = AF_LOCAL;
+ 	if (!path_is_absolute) {
+ 		name_size =
+-			snprintf(addr.sun_path, sizeof addr.sun_path,
++			snprintf(sun_path, max_name_size,
+ 			         "%s/%s", runtime_dir, name) + 1;
+ 	} else {
+ 		/* absolute path */
+ 		name_size =
+-			snprintf(addr.sun_path, sizeof addr.sun_path,
++			snprintf(sun_path, max_name_size,
+ 			         "%s", name) + 1;
+ 	}
+ 
+ 	assert(name_size > 0);
+-	if (name_size > (int)sizeof addr.sun_path) {
++	if (name_size > max_name_size) {
+ 		if (!path_is_absolute) {
+ 			wl_log("error: socket path \"%s/%s\" plus null terminator"
+-			       " exceeds %i bytes\n", runtime_dir, name, (int) sizeof(addr.sun_path));
++			       " exceeds %i bytes\n", runtime_dir, name, max_name_size);
+ 		} else {
+ 			wl_log("error: socket path \"%s\" plus null terminator"
+-			       " exceeds %i bytes\n", name, (int) sizeof(addr.sun_path));
++			       " exceeds %i bytes\n", name, max_name_size);
+ 		}
+ 		close(fd);
+ 		/* to prevent programs reporting
+diff --git a/src/wayland-server.c b/src/wayland-server.c
+index d51acc6..e6e4e6e 100644
+--- a/src/wayland-server.c
++++ b/src/wayland-server.c
+@@ -1162,8 +1162,10 @@ wl_socket_destroy(struct wl_socket *s)
+ {
+ 	if (s->source)
+ 		wl_event_source_remove(s->source);
++#ifndef __ANDROID
+ 	if (s->addr.sun_path[0])
+ 		unlink(s->addr.sun_path);
++#endif
+ 	if (s->fd >= 0)
+ 		close(s->fd);
+ 	if (s->lock_addr[0])
+@@ -1573,10 +1575,17 @@ socket_data(int fd, uint32_t mask, void *data)
+ static int
+ wl_socket_lock(struct wl_socket *socket)
+ {
++#ifndef __ANDROID__
+ 	struct stat socket_stat;
++#endif
+ 
+-	snprintf(socket->lock_addr, sizeof socket->lock_addr,
+-		 "%s%s", socket->addr.sun_path, LOCK_SUFFIX);
++	snprintf(socket->lock_addr, sizeof socket->lock_addr, "%s%s",
++#ifndef __ANDROID__
++		 socket->addr.sun_path,
++#else
++		 socket->addr.sun_path + 1,
++#endif
++		 LOCK_SUFFIX);
+ 
+ 	socket->fd_lock = open(socket->lock_addr, O_CREAT | O_CLOEXEC | O_RDWR,
+ 			       (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP));
+@@ -1593,6 +1602,7 @@ wl_socket_lock(struct wl_socket *socket)
+ 		goto err_fd;
+ 	}
+ 
++#ifndef __ANDROID__
+ 	if (lstat(socket->addr.sun_path, &socket_stat) < 0 ) {
+ 		if (errno != ENOENT) {
+ 			wl_log("did not manage to stat file %s\n",
+@@ -1603,6 +1613,7 @@ wl_socket_lock(struct wl_socket *socket)
+ 		   socket_stat.st_mode & S_IWGRP) {
+ 		unlink(socket->addr.sun_path);
+ 	}
++#endif
+ 
+ 	return 0;
+ err_fd:
+@@ -1622,7 +1633,8 @@ err:
+ static int
+ wl_socket_init_for_display_name(struct wl_socket *s, const char *name)
+ {
+-	int name_size;
++	char *sun_path;
++	int name_size, max_name_size;
+ 	const char *runtime_dir = "";
+ 	const char *separator = "";
+ 
+@@ -1640,22 +1652,29 @@ wl_socket_init_for_display_name(struct wl_socket *s, const char *name)
+ 		separator = "/";
+ 	}
+ 
++	sun_path = s->addr.sun_path;
++	max_name_size = sizeof(s->addr.sun_path);
++#ifdef __ANDROID__
++	/* Android requires abstract sockets which prefix the path with '\0' */
++	*sun_path++ = 0;
++	max_name_size--;
++#endif
++
+ 	s->addr.sun_family = AF_LOCAL;
+-	name_size = snprintf(s->addr.sun_path, sizeof s->addr.sun_path,
++	name_size = snprintf(sun_path, max_name_size,
+ 			     "%s%s%s", runtime_dir, separator, name) + 1;
+ 
+-	assert(name_size > 0);
+-	if (name_size > (int)sizeof s->addr.sun_path) {
++	if (name_size > max_name_size) {
+ 		wl_log("error: socket path \"%s%s%s\" plus null terminator"
+-		       " exceeds 108 bytes\n", runtime_dir, separator, name);
+-		*s->addr.sun_path = 0;
++		       " exceeds %i bytes\n", runtime_dir, separator, name, max_name_size);
++		*sun_path = 0;
+ 		/* to prevent programs reporting
+ 		 * "failed to add socket: Success" */
+ 		errno = ENAMETOOLONG;
+ 		return -1;
+ 	}
+ 
+-	s->display_name = (s->addr.sun_path + name_size - 1) - strlen(name);
++	s->display_name = (sun_path + name_size - 1) - strlen(name);
+ 
+ 	return 0;
+ }
+@@ -1670,7 +1689,12 @@ _wl_display_add_socket(struct wl_display *display, struct wl_socket *s)
+ 		return -1;
+ 	}
+ 
+-	size = offsetof (struct sockaddr_un, sun_path) + strlen(s->addr.sun_path);
++	size = offsetof (struct sockaddr_un, sun_path) +
++#ifndef __ANDROID__
++		   strlen(s->addr.sun_path);
++#else
++		   strlen(s->addr.sun_path) + 1;
++#endif
+ 	if (bind(s->fd, (struct sockaddr *) &s->addr, size) < 0) {
+ 		wl_log("bind() failed with error: %s\n", strerror(errno));
+ 		return -1;
+-- 
+2.42.0
+
