@@ -1,0 +1,24 @@
+From c5910e24e1e6c4f94f5abee6e872634fb0b5b266 Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Mon, 13 Nov 2023 11:51:48 +0000
+Subject: [PATCH libxcb] Ignore configure~
+
+---
+ .gitignore | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/.gitignore b/.gitignore
+index d0ba8d2..ae1bded 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -16,6 +16,7 @@ config.h*
+ config.log
+ config.status
+ configure
++configure~
+ configure.lineno
+ libtool
+ m4/l*.m4
+-- 
+2.42.0
+

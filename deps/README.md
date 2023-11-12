@@ -2,8 +2,8 @@
 
 These are indirect dependencies by the major components, the tags tracked by the submodule are listed below:
 ```
-xcb-proto - xcb-proto-1.16.0
-libXau - libXau-1.0.11
+xcbproto - xcb-proto-1.16.0
+libxau - libXau-1.0.11
 libxcb - libxcb-1.16
 
 xorgproto - xorgproto-2023.2
@@ -34,4 +34,18 @@ libxkbcommon - xkbcommon-1.5.0
 
 SDL - release-2.28.3
 pixman - pixman-0.42.2
+wlroots - 0.16.2
+libxkbfile - libxkbfile-1.1.2
+libxfont - libXfont2-2.0.6
+libfontenc - libfontenc-1.1.7
+util - font-util-1.4.1
+freetype - VER-2-13-2
+libxcvt - libxcvt-0.1.2
+nettle - nettle_3.9.1_release_20230601
+libxshmfence - libxshmfence-1.3.2
+libxcb-wm - xcb-util-wm-0.4.2
+libandroid-shmem - v0.4
+Vulkan-Headers - v1.3.269
 ```
+
+Note: The format of the contents within the codeblock is fixed and depended upon by scripts.

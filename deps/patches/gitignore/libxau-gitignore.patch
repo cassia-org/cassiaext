@@ -1,0 +1,22 @@
+From c6300d42a85fe11bd7f94b1b10ac03183f24563e Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Mon, 13 Nov 2023 11:48:53 +0000
+Subject: [PATCH libXau] Ignore test-driver
+
+---
+ .gitignore | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/.gitignore b/.gitignore
+index 8e9fcf2..a09c903 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -76,3 +76,4 @@ core
+ #		Edit the following section as needed
+ # For example, !report.pc overrides *.pc. See 'man gitignore'
+ # 
++test-driver
+\ No newline at end of file
+-- 
+2.42.0
+

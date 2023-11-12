@@ -1,0 +1,21 @@
+From 7924a5effe8cda65f1825d3e801dca516abd55ed Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Mon, 13 Nov 2023 12:00:35 +0000
+Subject: [PATCH] Ignore *.a files
+
+---
+ .gitignore | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/.gitignore b/.gitignore
+index 1930e81..c578581 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,3 +1,4 @@
++*.a
+ *.o
+ *.so
+ tags
+-- 
+2.42.0
+

@@ -82,3 +82,42 @@
 [submodule "deps/pixman"]
 	path = deps/pixman
 	url = https://gitlab.freedesktop.org/pixman/pixman.git
+[submodule "deps/wlroots"]
+	path = deps/wlroots
+	url = https://gitlab.freedesktop.org/wlroots/wlroots.git
+[submodule "deps/libxkbfile"]
+	path = deps/libxkbfile
+	url = https://gitlab.freedesktop.org/xorg/lib/libxkbfile.git
+[submodule "deps/libxfont"]
+	path = deps/libxfont
+	url = https://gitlab.freedesktop.org/xorg/lib/libxfont.git
+[submodule "deps/libfontenc"]
+	path = deps/libfontenc
+	url = https://gitlab.freedesktop.org/xorg/lib/libfontenc.git
+[submodule "deps/util"]
+	path = deps/util
+	url = https://gitlab.freedesktop.org/xorg/font/util.git
+[submodule "deps/freetype"]
+	path = deps/freetype
+	url = https://gitlab.freedesktop.org/freetype/freetype.git
+[submodule "deps/libxcvt"]
+	path = deps/libxcvt
+	url = https://gitlab.freedesktop.org/xorg/lib/libxcvt.git
+[submodule "deps/nettle"]
+	path = deps/nettle
+	url = https://git.lysator.liu.se/nettle/nettle.git
+[submodule "deps/libxshmfence"]
+	path = deps/libxshmfence
+	url = https://gitlab.freedesktop.org/xorg/lib/libxshmfence.git
+[submodule "deps/libxcb-wm"]
+	path = deps/libxcb-wm
+	url = https://gitlab.freedesktop.org/xorg/lib/libxcb-wm.git
+[submodule "deps/libandroid-shmem"]
+	path = deps/libandroid-shmem
+	url = https://github.com/termux/libandroid-shmem.git
+[submodule "deps/Vulkan-Headers"]
+	path = deps/Vulkan-Headers
+	url = https://github.com/KhronosGroup/Vulkan-Headers.git
+[submodule "xserver"]
+	path = xserver
+	url = git@github.com:cassia-org/xserver.git

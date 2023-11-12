@@ -16,6 +16,8 @@ endif()
 
 project(proj LANGUAGES C CXX ASM VERSION 1.0)
 
+
+## Environment setup
 include(ExternalProject)
 
 set(OUTPUT_PREFIX_DIR ${CMAKE_BINARY_DIR}/prefix)
@@ -35,29 +37,67 @@ if (CMAKE_CROSSCOMPILING)
   set(CROSS_COMPILER_SYSROOT_ARG "--sysroot=${CMAKE_SYSROOT}")
 endif()
 
-set(COMPILER_SETTINGS
-  # Autotools strips target from CFLAGS so need to use CC instead
-  "CXX=${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER} ${CROSS_COMPILER_TARGET_ARG}"
-  "AS=${CMAKE_ASM_COMPILER} ${CROSS_COMPILER_TARGET_ARG}"
-  "CPP=${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER} ${CROSS_COMPILER_TARGET_ARG} -E"
-  "CC=${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER} ${CROSS_COMPILER_TARGET_ARG}"
-  "AR=${CMAKE_AR}"
-  "RANLIB=${CMAKE_RANLIB}"
-  "NM=${CMAKE_NM}"
-  "STRIP=${CMAKE_STRIP}"
+function(update_cross)
+  if (CMAKE_CXX_COMPILER_LAUNCHER)
+    set(CMAKE_CXX_COMPILER_LAUNCHER_SPACE "${CMAKE_CXX_COMPILER_LAUNCHER} ")
+  endif()
+  if (CMAKE_C_COMPILER_LAUNCHER)
+    set(CMAKE_C_COMPILER_LAUNCHER_SPACE "${CMAKE_C_COMPILER_LAUNCHER} ")
+  endif()
 
-  "CFLAGS=${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}"
-  "ASMFLAGS=${CMAKE_ASM_FLAGS} ${CMAKE_ASM_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}"
-  "CPPFLAGS=${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILD_TYPE_UC}}"
-  "CXXFLAGS=${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}"
-  "LDFLAGS=${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}"
-  "PKG_CONFIG_LIBDIR=${OUTPUT_PREFIX_DIR}/lib/pkgconfig:${OUTPUT_PREFIX_DIR}/share/pkgconfig"
-  "PKG_CONFIG_PATH=\"\""
-  "PKG_CONFIG=pkg-config"
-)
+  set(COMPILER_SETTINGS
+    # Autotools strips target from CFLAGS so need to use CC instead
+    "CXX=${CMAKE_CXX_COMPILER_LAUNCHER_SPACE}${CMAKE_CXX_COMPILER} ${CROSS_COMPILER_TARGET_ARG}"
+    "AS=${CMAKE_ASM_COMPILER} ${CROSS_COMPILER_TARGET_ARG}"
+    "CPP=${CMAKE_C_COMPILER_LAUNCHER_SPACE}${CMAKE_C_COMPILER} ${CROSS_COMPILER_TARGET_ARG} -E"
+    "CC=${CMAKE_C_COMPILER_LAUNCHER_SPACE}${CMAKE_C_COMPILER} ${CROSS_COMPILER_TARGET_ARG}"
+    "AR=${CMAKE_AR}"
+    "RANLIB=${CMAKE_RANLIB}"
+    "NM=${CMAKE_NM}"
+    "STRIP=${CMAKE_STRIP}"
 
-# Executes the appended program with MinGW compilers added to path
-set(MINGW_COMMAND "${CMAKE_COMMAND}" -E env "PATH=${MINGW_SYSROOT_PATH}/bin:$ENV{PATH}")
+    "CFLAGS=${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}"
+    "ASMFLAGS=${CMAKE_ASM_FLAGS} ${CMAKE_ASM_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}"
+    "CPPFLAGS=${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILD_TYPE_UC}}"
+    "CXXFLAGS=${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}"
+    "LDFLAGS=${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}"
+    "PKG_CONFIG_LIBDIR=${OUTPUT_PREFIX_DIR}/lib/pkgconfig:${OUTPUT_PREFIX_DIR}/share/pkgconfig"
+    "PKG_CONFIG_PATH=\"\""
+    "PKG_CONFIG=pkg-config"
+  )
+
+  # Only way to make value accessible in local scope as well as parent scope
+  # As setting PARENT_SCOPE would cause local accesses to not be updated
+  set(COMPILER_SETTINGS "${COMPILER_SETTINGS}" PARENT_SCOPE)
+
+  set(CROSS_COMMAND ${CMAKE_COMMAND} -E env ${COMPILER_SETTINGS} PARENT_SCOPE)
+endfunction()
+
+update_cross()
+set(BASE_DEPENDS "")
+
+
+## Make/Autotools project functions
+function(add_make_project name path)
+  cmake_parse_arguments(PARSE_ARGV 1 ARG "BUILD_ALWAYS" "MAKE_TARGET;INSTALL_TARGET" "DEPENDS")
+
+  if (NOT DEFINED ARG_INSTALL_TARGET)
+    set(ARG_INSTALL_TARGET "install")
+  endif()
+
+  ExternalProject_Add(${name}
+    INSTALL_DIR         ${OUTPUT_PREFIX_DIR}
+    SOURCE_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/${path}
+    BUILD_IN_SOURCE     TRUE
+    CONFIGURE_COMMAND   ""
+    BUILD_COMMAND       ${CROSS_COMMAND} make -j ${ARG_MAKE_TARGET}
+    INSTALL_COMMAND     ${CROSS_COMMAND} PREFIX=<INSTALL_DIR> make -j ${ARG_INSTALL_TARGET}
+    LOG_BUILD           TRUE
+    LOG_INSTALL         TRUE
+    BUILD_ALWAYS        ${ARG_BUILD_ALWAYS}
+    DEPENDS             ${BASE_DEPENDS} ${ARG_DEPENDS}
+  )
+endfunction()
 
 function(add_autotools_project name path)
   cmake_parse_arguments(PARSE_ARGV 1 ARG "BUILD_ALWAYS" "MAKE_TARGET;INSTALL_TARGET" "GENERATE_COMMAND;DEPENDS;CONFIGURE_FLAGS")
@@ -69,31 +109,58 @@ function(add_autotools_project name path)
   ExternalProject_Add(${name}
     INSTALL_DIR         ${OUTPUT_PREFIX_DIR}
     SOURCE_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/${path}
-    CONFIGURE_COMMAND   ${MINGW_COMMAND} <SOURCE_DIR>/configure ${COMPILER_SETTINGS} --prefix=<INSTALL_DIR> --host=${CMAKE_C_COMPILER_TARGET} ${ARG_CONFIGURE_FLAGS}
-    BUILD_COMMAND       ${MINGW_COMMAND} make -j ${ARG_MAKE_TARGET}
-    INSTALL_COMMAND     ${MINGW_COMMAND} make prefix=<INSTALL_DIR> -j ${ARG_INSTALL_TARGET}
+    CONFIGURE_COMMAND   <SOURCE_DIR>/configure ${COMPILER_SETTINGS} --prefix=<INSTALL_DIR> --host=${CMAKE_C_COMPILER_TARGET} ${ARG_CONFIGURE_FLAGS}
+    BUILD_COMMAND       make -j ${ARG_MAKE_TARGET}
+    INSTALL_COMMAND     make prefix=<INSTALL_DIR> -j ${ARG_INSTALL_TARGET}
     LOG_CONFIGURE       TRUE
     LOG_BUILD           TRUE
     LOG_INSTALL         TRUE
     BUILD_ALWAYS        ${ARG_BUILD_ALWAYS}
-    DEPENDS             ${ARG_DEPENDS}
+    DEPENDS             ${BASE_DEPENDS} ${ARG_DEPENDS}
   )
   if (DEFINED ARG_GENERATE_COMMAND)
     ExternalProject_Add_Step(${name} generate
-      COMMAND ${MINGW_COMMAND} ${ARG_GENERATE_COMMAND}
+      COMMAND ${CROSS_COMMAND} ${ARG_GENERATE_COMMAND}
       BYPRODUCTS <SOURCE_DIR>/configure
       WORKING_DIRECTORY <SOURCE_DIR>
       DEPENDEES download
       DEPENDERS configure
-      ALWAYS TRUE
+      ALWAYS FALSE
       LOG TRUE
     )
   endif()
 endfunction()
 
-if (CMAKE_C_COMPILER_LAUNCHER)
-  set(CMAKE_C_COMPILER_LAUNCHER_SPACE "${CMAKE_C_COMPILER_LAUNCHER} ")
-endif()
+
+## Android shared memory shims
+# This needs to be done early as it's effectively treated as a system library
+add_make_project(libandroidshmem deps/libandroid-shmem)
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-L${OUTPUT_PREFIX_DIR}/lib,-landroid-shmem")
+update_cross()
+set(BASE_DEPENDS ${BASE_DEPENDS} libandroidshmem)
+
+
+# CMake & Meson project functions
+function(add_cmake_project name path)
+  cmake_parse_arguments(PARSE_ARGV 1 ARG "BUILD_ALWAYS" "CMAKE_ARGS;DEPENDS" "CONFIGURE_COMMAND;BUILD_COMMAND;INSTALL_COMMAND")
+
+  if (NOT DEFINED ARG_INSTALL_COMMAND)
+    set(ARG_INSTALL_COMMAND ${CMAKE_COMMAND} --build . --target install)
+  endif()
+
+  ExternalProject_Add(${name}
+    INSTALL_DIR         ${OUTPUT_PREFIX_DIR}
+    SOURCE_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/${path}
+    CONFIGURE_COMMAND   ${CMAKE_COMMAND} -G Ninja -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DANDROID_ABI=${ANDROID_ABI} -DANDROID_PLATFORM=${ANDROID_PLATFORM} -DANDROID_SDK=${ANDROID_SDK} -DANDROID_NDK=${ANDROID_NDK} ${ARG_CMAKE_ARGS} ${ARG_CONFIGURE_COMMAND} <SOURCE_DIR>
+    BUILD_COMMAND       ${CMAKE_COMMAND} --build .
+    INSTALL_COMMAND     ${ARG_INSTALL_COMMAND}
+    LOG_CONFIGURE       TRUE
+    LOG_BUILD           TRUE
+    LOG_INSTALL         TRUE
+    BUILD_ALWAYS        ${ARG_BUILD_ALWAYS}
+    DEPENDS             ${BASE_DEPENDS} ${ARG_DEPENDS}
+  )
+endfunction()
 
 set(MESON_CROSS_FILE ${CMAKE_CURRENT_BINARY_DIR}/meson_cross.txt)
 file(WRITE ${MESON_CROSS_FILE}
@@ -103,13 +170,22 @@ file(WRITE ${MESON_CROSS_FILE}
   "ar = '${CMAKE_AR}'\n"
   "strip = '${CMAKE_STRIP}'\n"
   "pkgconfig = ['env', 'PKG_CONFIG_LIBDIR=${OUTPUT_PREFIX_DIR}/lib/pkgconfig:${OUTPUT_PREFIX_DIR}/share/pkgconfig', 'pkg-config']\n"
+  "cmake = '${CMAKE_COMMAND}'\n"
   "\n"
-  "[properties]\n"
+  "[built-in options]\n"
   "c_args = '${CROSS_COMPILER_TARGET_ARG} ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}'\n"
   "cpp_args = '${CROSS_COMPILER_TARGET_ARG} ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}'\n"
   "c_link_args = '${CROSS_COMPILER_TARGET_ARG} ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}'\n"
   "cpp_link_args = '${CROSS_COMPILER_TARGET_ARG} ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_${BUILD_TYPE_UC}} ${CROSS_COMPILER_SYSROOT_ARG}'\n"
+  "[properties]\n"
   "pkg_config_libdir = '${OUTPUT_PREFIX_DIR}/lib/pkgconfig:${OUTPUT_PREFIX_DIR}/share/pkgconfig'\n"
+  "\n"
+  "[cmake]\n"
+  "CMAKE_TOOLCHAIN_FILE = '${CMAKE_TOOLCHAIN_FILE}'\n"
+  "ANDROID_ABI = '${ANDROID_ABI}'\n"
+  "ANDROID_PLATFORM = '${ANDROID_PLATFORM}'\n"
+  "ANDROID_SDK = '${ANDROID_SDK}'\n"
+  "ANDROID_NDK = '${ANDROID_NDK}'\n"
   "\n"
   "[host_machine]\n"
   "system = 'android'\n"
@@ -135,24 +211,32 @@ function(add_meson_project name path)
     set(MESON_BUILD_TYPE "release")
   endif()
 
-  if (DEFINED ARG_DEPENDS)
-    message("${name} dependencies: ${ARG_DEPENDS}")
-  endif()
-
   ExternalProject_Add(${name}
     INSTALL_DIR         ${OUTPUT_PREFIX_DIR}
     SOURCE_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/${path}
-    CONFIGURE_COMMAND   ${MINGW_COMMAND} ${COMPILER_SETTINGS} meson setup --strip --buildtype ${MESON_BUILD_TYPE} ${ARG_CONFIGURE_FLAGS} --cross-file=${MESON_CROSS_FILE} --prefix=<INSTALL_DIR> . <SOURCE_DIR>
-    BUILD_COMMAND       ${MINGW_COMMAND} meson compile
-    INSTALL_COMMAND     ${MINGW_COMMAND} meson install --no-rebuild
+    CONFIGURE_COMMAND   meson setup --strip --buildtype ${MESON_BUILD_TYPE} ${ARG_CONFIGURE_FLAGS} --cross-file=${MESON_CROSS_FILE} --prefix=<INSTALL_DIR> . <SOURCE_DIR>
+    BUILD_COMMAND       meson compile
+    INSTALL_COMMAND     meson install --no-rebuild
     LOG_CONFIGURE       TRUE
     LOG_BUILD           TRUE
     LOG_INSTALL         TRUE
     BUILD_ALWAYS        ${ARG_BUILD_ALWAYS}
-    DEPENDS             ${ARG_DEPENDS}
+    DEPENDS             ${BASE_DEPENDS} ${ARG_DEPENDS}
   )
 endfunction()
 
+
+# Merge the compilation databases into a single file
+add_custom_target(compile_commands
+  ALL
+  COMMAND find ${CMAKE_BINARY_DIR} -iname "compile_commands.json" | xargs jq -s 'map(.[])' > compile_commands.json
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  COMMENT "Merging compilation databases"
+  BYPRODUCTS compile_commands.json
+)
+
+
+## Projects
 add_autotools_project(xcbproto deps/xcbproto
                       GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh)
 add_autotools_project(xorgproto deps/xorgproto
@@ -235,12 +319,68 @@ add_meson_project(libxkbcommon deps/libxkbcommon
                   DEPENDS wayland wayland-protocols libx11
                   CONFIGURE_FLAGS -Denable-docs=false -Denable-xkbregistry=false)
 
+add_autotools_project(libxkbfile deps/libxkbfile
+                      GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh
+                      DEPENDS libx11 xorgproto)
+
+add_autotools_project(libfontenc deps/libfontenc
+                      GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh
+                      DEPENDS xorgproto)
+
+add_autotools_project(freetype deps/freetype
+                      GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh)
+
+add_autotools_project(libxfont deps/libxfont
+                      GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh
+                      CONFIGURE_FLAGS --disable-fc
+                      DEPENDS xorgproto libxtrans libfontenc freetype)
+
+add_autotools_project(fontutil deps/util
+                      GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh)
+
+add_meson_project(libxcvt deps/libxcvt)
+
+add_autotools_project(nettle deps/nettle
+                      GENERATE_COMMAND NOCONFIGURE=1 ./.bootstrap
+                      CONFIGURE_FLAGS --disable-documentation)
+
+add_autotools_project(libxshmfence deps/libxshmfence
+                      GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh
+                      DEPENDS xorgproto)
+
+add_meson_project(xserver xserver
+                  DEPENDS xorgproto libxtrans libx11 libxkbfile libxfont fontutil wayland wayland-protocols libxcvt nettle libxshmfence
+                  CONFIGURE_FLAGS -Ddocs=false -Ddevel-docs=false -Dglamor=false -Dxdmcp=false -Dglx=false -Dsecure-rpc=false -Ddri3=false)
+
 # -Da64-neon=disabled is required to avoid a build error on NDK Clang being unable to compile .S files correctly
 add_meson_project(pixman deps/pixman
                   CONFIGURE_FLAGS -Dopenmp=disabled -Dgtk=disabled -Dtests=disabled -Da64-neon=disabled)
 
-# add_autotools_project(sdl2 deps/SDL
-#                       GENERATE_COMMAND ./autogen.sh)
+add_autotools_project(libxcbwm deps/libxcb-wm
+                      GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh
+                      DEPENDS libxcb)
+
+add_meson_project(wlroots deps/wlroots
+                  DEPENDS wayland wayland-protocols pixman xserver libxcbwm
+                  CONFIGURE_FLAGS -Ddefault_library=static -Dexamples=false -Dxwayland=enabled -Dbackends= -Dstub_session=true -Drenderers= -Dallocators=)
+
+add_cmake_project(vulkan-headers deps/Vulkan-Headers
+                  CONFIGURE_FLAGS -DBUILD_TESTS=OFF)
+
+# Vulkan headers don't have a pkg-config file so create one
+file(WRITE ${OUTPUT_PREFIX_DIR}/lib/pkgconfig/vulkan.pc
+  "prefix=${OUTPUT_PREFIX_DIR}\n"
+  "includedir=${OUTPUT_PREFIX_DIR}/include\n"
+  "\n"
+  "Name: Vulkan\n"
+  "Description: Vulkan Headers\n"
+  "Version: 1.0.0\n"
+  "Requires:\n"
+  "Conflicts:\n"
+  "Libs:\n"
+  "Libs.private: \n"
+  "Cflags: -I${OUTPUT_PREFIX_DIR}/include\n"
+)
 
 add_meson_project(gamescope gamescope
-                  DEPENDS wayland wayland-protocols libx11 libxdamage libxcomposite libxrender libxext libxxf86vm libxtst libxres libxt libxmu libxkbcommon pixman)
+                  DEPENDS wayland wayland-protocols wlroots vulkan-headers libx11 libxdamage libxcomposite libxrender libxext libxxf86vm libxtst libxres libxt libxmu libxkbcommon)

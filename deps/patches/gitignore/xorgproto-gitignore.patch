@@ -1,0 +1,22 @@
+From 9255511b4d1991bb6a48357a3923410312353520 Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Mon, 13 Nov 2023 11:54:49 +0000
+Subject: [PATCH xorgproto] Ignore test-driver
+
+---
+ .gitignore | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/.gitignore b/.gitignore
+index 1baa360..c53b36c 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -18,3 +18,4 @@ man/Xprint.7
+ missing
+ stamp-h1
+ stamp-h2
++test-driver
+\ No newline at end of file
+-- 
+2.42.0
+
