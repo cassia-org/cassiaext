@@ -1,0 +1,60 @@
+From 885364ebd039ab507cd29df263681f53d1a48177 Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Sun, 29 Oct 2023 18:49:19 +0000
+Subject: [PATCH 3/3] types/output: Remove DRM dependency
+
+---
+ types/output/cursor.c | 2 +-
+ types/output/output.c | 2 +-
+ types/output/render.c | 9 +++++++--
+ 3 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/types/output/cursor.c b/types/output/cursor.c
+index 927536ad..91e6683c 100644
+--- a/types/output/cursor.c
++++ b/types/output/cursor.c
+@@ -1,5 +1,5 @@
+ #include <assert.h>
+-#include <drm_fourcc.h>
++#define DRM_FORMAT_ARGB8888 UINT32_MAX
+ #include <stdlib.h>
+ #include <wlr/interfaces/wlr_output.h>
+ #include <wlr/render/wlr_renderer.h>
+diff --git a/types/output/output.c b/types/output/output.c
+index 9a2e5515..642792ed 100644
+--- a/types/output/output.c
++++ b/types/output/output.c
+@@ -1,7 +1,7 @@
+ #define _POSIX_C_SOURCE 200809L
+ #include <assert.h>
+ #include <backend/backend.h>
+-#include <drm_fourcc.h>
++#define DRM_FORMAT_XRGB8888 UINT32_MAX
+ #include <stdlib.h>
+ #include <wlr/interfaces/wlr_output.h>
+ #include <wlr/types/wlr_compositor.h>
+diff --git a/types/output/render.c b/types/output/render.c
+index 5d4dccc1..eddd9314 100644
+--- a/types/output/render.c
++++ b/types/output/render.c
+@@ -1,10 +1,15 @@
+ #include <assert.h>
+-#include <drm_fourcc.h>
++#define DRM_FORMAT_INVALID UINT32_MAX
+ #include <stdlib.h>
+ #include <wlr/interfaces/wlr_output.h>
+ #include <wlr/render/interface.h>
+ #include <wlr/util/log.h>
+-#include <xf86drm.h>
++#define DRM_FORMAT_MOD_LINEAR 1
++#define DRM_FORMAT_MOD_INVALID UINT32_MAX
++
++static char *drmGetFormatName(uint32_t format) {
++	return NULL;
++}
+ #include "backend/backend.h"
+ #include "render/allocator/allocator.h"
+ #include "render/drm_format_set.h"
+-- 
+2.42.0
+

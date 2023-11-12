@@ -13,8 +13,11 @@ pkgs.mkShell {
     automake
     cmake
     xorg.utilmacros
+    xorg.fontutil
     xorg.xtrans
     texinfo
     bison
+    glslang
+    jq
   ];
 }

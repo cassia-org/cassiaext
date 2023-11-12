@@ -1,0 +1,35 @@
+From de2cb2cbc3d5c6ed9d340815a36497e90a988134 Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Sun, 29 Oct 2023 17:47:43 +0000
+Subject: [PATCH 1/2] Fix compilation on Bionic libc
+
+`paths.h` on Bionic doesn't define `_PATH_TMP` wasn't defined and had to be manually set to `/data/local/tmp`. In addition, there was an implicit dependency on `string.h` that wasn't satisfied so it was included explicitly.
+---
+ shmem.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/shmem.c b/shmem.c
+index 89ea3da..1d4be7e 100644
+--- a/shmem.c
++++ b/shmem.c
+@@ -5,6 +5,7 @@
+ #include <stdint.h>
+ #include <stdio.h>
+ #include <stdlib.h>
++#include <string.h>
+ #include <sys/mman.h>
+ #include <sys/socket.h>
+ #include <sys/un.h>
+@@ -17,6 +18,9 @@
+ #include "shm.h"
+ 
+ #define DBG(...) __android_log_print(ANDROID_LOG_INFO, "shmem", __VA_ARGS__)
++#ifndef _PATH_TMP
++	#define _PATH_TMP "/data/local/tmp/"
++#endif
+ #define ASHV_KEY_SYMLINK_PATH _PATH_TMP "ashv_key_%d"
+ #define ANDROID_SHMEM_SOCKNAME "/dev/shm/%08x"
+ #define ROUND_UP(N, S) ((((N) + (S) - 1) / (S)) * (S))
+-- 
+2.42.0
+

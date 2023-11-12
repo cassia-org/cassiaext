@@ -1,0 +1,34 @@
+From 74f015dea0fac5f817938210bee3e57a3f6276cc Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Sun, 8 Oct 2023 18:17:00 +0000
+Subject: [PATCH libxshmfence] Use <limits.h> rather than <values.h>
+
+---
+ src/xshmfence_futex.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/xshmfence_futex.h b/src/xshmfence_futex.h
+index 673ac0e..200679b 100644
+--- a/src/xshmfence_futex.h
++++ b/src/xshmfence_futex.h
+@@ -48,7 +48,7 @@ static inline int futex_wait(int32_t *addr, int32_t value) {
+ #else
+ 
+ #include <stdint.h>
+-#include <values.h>
++#include <limits.h>
+ #include <linux/futex.h>
+ #include <sys/time.h>
+ #include <sys/syscall.h>
+@@ -59,7 +59,7 @@ static inline long sys_futex(void *addr1, int op, int val1, struct timespec *tim
+ }
+ 
+ static inline int futex_wake(int32_t *addr) {
+-	return sys_futex(addr, FUTEX_WAKE, MAXINT, NULL, NULL, 0);
++	return sys_futex(addr, FUTEX_WAKE, INT_MAX, NULL, NULL, 0);
+ }
+ 
+ static inline int futex_wait(int32_t *addr, int32_t value) {
+-- 
+2.42.0
+

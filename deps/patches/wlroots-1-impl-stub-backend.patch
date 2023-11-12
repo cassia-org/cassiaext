@@ -1,0 +1,164 @@
+From 86414c6d73f61abd04c8bb6e976f017975f86e58 Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Sun, 29 Oct 2023 18:46:58 +0000
+Subject: [PATCH 1/3] backend/session: Implement stubbed backend session
+
+Certain platforms such as Android don't require session management
+as they operate off a single session, in these cases libseat isn't
+required and the session code can be stubbed.
+---
+ backend/session/meson.build    | 20 +++++---
+ backend/session/stub_session.c | 90 ++++++++++++++++++++++++++++++++++
+ include/wlr/backend/session.h  |  1 -
+ meson_options.txt              |  1 +
+ 4 files changed, 104 insertions(+), 8 deletions(-)
+ create mode 100644 backend/session/stub_session.c
+
+diff --git a/backend/session/meson.build b/backend/session/meson.build
+index 27915506..657e3221 100644
+--- a/backend/session/meson.build
++++ b/backend/session/meson.build
+@@ -1,7 +1,13 @@
+-libseat = dependency('libseat',
+-	version: '>=0.2.0',
+-	fallback: 'seatd',
+-	default_options: ['server=disabled', 'man-pages=disabled'],
+-)
+-wlr_files += files('session.c')
+-wlr_deps += libseat
++stub_session = get_option('stub_session')
++
++if stub_session
++	wlr_files += files('stub_session.c')
++else
++	libseat = dependency('libseat',
++		version: '>=0.2.0',
++		fallback: 'seatd',
++		default_options: ['server=disabled', 'man-pages=disabled'],
++	)
++	wlr_files += files('session.c')
++	wlr_deps += libseat
++endif
+\ No newline at end of file
+diff --git a/backend/session/stub_session.c b/backend/session/stub_session.c
+new file mode 100644
+index 00000000..8f40d2e1
+--- /dev/null
++++ b/backend/session/stub_session.c
+@@ -0,0 +1,90 @@
++#define _POSIX_C_SOURCE 200809L
++#include <assert.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <unistd.h>
++#include <stdlib.h>
++#include <wayland-server-core.h>
++#include <wlr/backend/session.h>
++#include <wlr/util/log.h>
++#include "backend/session/session.h"
++
++static void handle_display_destroy(struct wl_listener *listener, void *data) {
++	struct wlr_session *session =
++		wl_container_of(listener, session, display_destroy);
++	wlr_session_destroy(session);
++}
++
++struct wlr_session *wlr_session_create(struct wl_display *disp) {
++	struct wlr_session *session = calloc(1, sizeof(*session));
++	if (!session) {
++		wlr_log_errno(WLR_ERROR, "Allocation failed");
++		return NULL;
++	}
++
++	/* We still create all of these since it's fine for them to be valid
++	 * wayland objects even if the underlying functionality is stubbed out */
++	wl_signal_init(&session->events.active);
++	wl_signal_init(&session->events.add_drm_card);
++	wl_signal_init(&session->events.destroy);
++	wl_list_init(&session->devices);
++
++	session->display = disp;
++
++	session->display_destroy.notify = handle_display_destroy;
++	wl_display_add_destroy_listener(disp, &session->display_destroy);
++
++	return session;
++}
++
++void wlr_session_destroy(struct wlr_session *session) {
++	if (!session) {
++		return;
++	}
++
++	wl_signal_emit_mutable(&session->events.destroy, session);
++	wl_list_remove(&session->display_destroy.link);
++
++	struct wlr_device *dev, *tmp_dev;
++	wl_list_for_each_safe(dev, tmp_dev, &session->devices, link) {
++		wlr_session_close_file(session, dev);
++	}
++
++	free(session);
++}
++
++struct wlr_device *wlr_session_open_file(struct wlr_session *session,
++		const char *path) {
++	wlr_log_errno(WLR_ERROR, "Opening device on stubbed session: '%s'", path);
++	return NULL;
++}
++
++void wlr_session_close_file(struct wlr_session *session,
++		struct wlr_device *dev) {
++	wlr_log_errno(WLR_ERROR, "Closing device on stubbed session: '%p'", dev);
++	return;
++}
++
++bool wlr_session_change_vt(struct wlr_session *session, unsigned vt) {
++	if (!session) {
++		return false;
++	}
++	wlr_log_errno(WLR_INFO, "Changing VT on stubbed session: '%i'", vt);
++	return true;
++}
++
++struct wlr_device *session_open_if_kms(struct wlr_session *restrict session,
++		const char *restrict path) {
++	if (!path) {
++		return NULL;
++	}
++
++	wlr_log_errno(WLR_ERROR, "Opening KMS device on stubbed session: '%s'", path);
++	return NULL;
++}
++
++ssize_t wlr_session_find_gpus(struct wlr_session *session,
++		size_t ret_len, struct wlr_device **ret) {
++	wlr_log_errno(WLR_ERROR, "Finding GPUs on stubbed session");
++	return -1;
++}
+diff --git a/include/wlr/backend/session.h b/include/wlr/backend/session.h
+index e5deda57..3583b317 100644
+--- a/include/wlr/backend/session.h
++++ b/include/wlr/backend/session.h
+@@ -1,7 +1,6 @@
+ #ifndef WLR_BACKEND_SESSION_H
+ #define WLR_BACKEND_SESSION_H
+ 
+-#include <libudev.h>
+ #include <stdbool.h>
+ #include <sys/types.h>
+ #include <wayland-server-core.h>
+diff --git a/meson_options.txt b/meson_options.txt
+index 1a439a4d..540c7fad 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -4,5 +4,6 @@ option('examples', type: 'boolean', value: true, description: 'Build example app
+ option('icon_directory', description: 'Location used to look for cursors (default: ${datadir}/icons)', type: 'string', value: '')
+ option('renderers', type: 'array', choices: ['auto', 'gles2', 'vulkan'], value: ['auto'], description: 'Select built-in renderers')
+ option('backends', type: 'array', choices: ['auto', 'drm', 'libinput', 'x11'], value: ['auto'], description: 'Select built-in backends')
++option('stub_session', type: 'boolean', value: false, description: 'Stub out session management')
+ option('allocators', type: 'array', choices: ['auto', 'gbm'], value: ['auto'],
+ 	description: 'Select built-in allocators')
+-- 
+2.42.0
+

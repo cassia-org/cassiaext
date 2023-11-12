@@ -1,0 +1,147 @@
+From 689bfa58ca7b865f818a12fe179fb9a9d0970b25 Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Sun, 29 Oct 2023 17:49:54 +0000
+Subject: [PATCH 2/2] Implement POSIX shared memory
+
+A shim for POSIX-style shmem (`shm_open`/`shm_unlink`) was added with `mman.h` that implements these functions. The implementations of these functions were taken from termux-packages patches for wlroots. However, the temporary path has been changed to match the convention of libandroid-shmem leading to incompatibility between them.
+---
+ Makefile |  1 +
+ mman.h   | 20 ++++++++++++++++
+ shmem.c  | 69 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 90 insertions(+)
+ create mode 100644 mman.h
+
+diff --git a/Makefile b/Makefile
+index 22bbf8d..af52acb 100644
+--- a/Makefile
++++ b/Makefile
+@@ -14,6 +14,7 @@ install: libandroid-shmem.a libandroid-shmem.so shm.h
+ 	install -D libandroid-shmem.a $(DESTDIR)$(PREFIX)/lib/libandroid-shmem.a
+ 	install -D libandroid-shmem.so $(DESTDIR)$(PREFIX)/lib/libandroid-shmem.so
+ 	install -D shm.h $(DESTDIR)$(PREFIX)/include/sys/shm.h
++	install -D mman.h $(DESTDIR)$(PREFIX)/include/sys/mman.h
+ 
+ clean:
+ 	rm -f libandroid-shmem.a libandroid-shmem.so
+diff --git a/mman.h b/mman.h
+new file mode 100644
+index 0000000..e241f42
+--- /dev/null
++++ b/mman.h
+@@ -0,0 +1,20 @@
++#ifndef _SYS_ANDROID_MMAN_H
++#define _SYS_ANDROID_MMAN_H
++
++#include_next <sys/mman.h>
++
++__BEGIN_DECLS
++
++/* Open shared memory segment. */
++#undef shm_open
++#define shm_open libandroid_shm_open
++extern int shm_open(const char *__name, int __oflag, mode_t __mode);
++
++/* Remove shared memory segment. */
++#undef shm_unlink
++#define shm_unlink libandroid_shm_unlink
++extern int shm_unlink(const char *__name);
++
++__END_DECLS
++
++#endif
+\ No newline at end of file
+diff --git a/shmem.c b/shmem.c
+index 1d4be7e..69d233f 100644
+--- a/shmem.c
++++ b/shmem.c
+@@ -16,6 +16,7 @@
+ #include <linux/ashmem.h>
+ 
+ #include "shm.h"
++#include "mman.h"
+ 
+ #define DBG(...) __android_log_print(ANDROID_LOG_INFO, "shmem", __VA_ARGS__)
+ #ifndef _PATH_TMP
+@@ -557,6 +558,69 @@ int shmctl(int shmid, int cmd, struct shmid_ds *buf)
+ 	return -1;
+ }
+ 
++#include <alloca.h>
++
++int shm_unlink(const char *name)
++{
++    size_t namelen;
++    char *fname;
++
++    /* Construct the filename.  */
++    while (name[0] == '/') name++;
++
++    if (name[0] == '\0') {
++        /* The name "/" is not supported.  */
++        errno = EINVAL;
++        return -1;
++    }
++
++    namelen = strlen(name);
++    fname = (char *) alloca(sizeof(_PATH_TMP) - 1 + namelen + 1);
++    memcpy(fname, _PATH_TMP, sizeof(_PATH_TMP) - 1);
++    memcpy(fname + sizeof(_PATH_TMP) - 1, name, namelen + 1);
++
++    return unlink(fname);
++}
++
++int shm_open(const char *name, int oflag, mode_t mode)
++{
++    size_t namelen;
++    char *fname;
++    int fd;
++
++    /* Construct the filename.  */
++    while (name[0] == '/') name++;
++
++    if (name[0] == '\0') {
++        /* The name "/" is not supported.  */
++        errno = EINVAL;
++        return -1;
++    }
++
++    namelen = strlen(name);
++    fname = (char *) alloca(sizeof(_PATH_TMP) - 1 + namelen + 1);
++    memcpy(fname, _PATH_TMP, sizeof(_PATH_TMP) - 1);
++    memcpy(fname + sizeof(_PATH_TMP) - 1, name, namelen + 1);
++
++    fd = open(fname, oflag, mode);
++    if (fd != -1) {
++        /* We got a descriptor.  Now set the FD_CLOEXEC bit.  */
++        int flags = fcntl(fd, F_GETFD, 0);
++        flags |= FD_CLOEXEC;
++        flags = fcntl(fd, F_SETFD, flags);
++
++        if (flags == -1) {
++            /* Something went wrong.  We cannot return the descriptor.  */
++            int save_errno = errno;
++            close(fd);
++            fd = -1;
++            errno = save_errno;
++        }
++    }
++
++    return fd;
++}
++
+ /* Make alias for use with e.g. dlopen() */
+ #undef shmctl
+ int shmctl(int shmid, int cmd, struct shmid_ds *buf) __attribute__((alias("libandroid_shmctl")));
+@@ -566,3 +630,8 @@ int shmget(key_t key, size_t size, int flags) __attribute__((alias("libandroid_s
+ void* shmat(int shmid, void const* shmaddr, int shmflg) __attribute__((alias("libandroid_shmat")));
+ #undef shmdt
+ int shmdt(void const* shmaddr) __attribute__((alias("libandroid_shmdt")));
++
++#undef shm_open
++int shm_open(const char *__name, int __oflag, mode_t __mode) __attribute__((alias("libandroid_shm_open")));
++#undef shm_unlink
++int shm_unlink(const char *__name) __attribute__((alias("libandroid_shm_unlink")));
+\ No newline at end of file
+-- 
+2.42.0
+
