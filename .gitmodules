@@ -121,3 +121,6 @@
 [submodule "xserver"]
 	path = xserver
 	url = git@github.com:cassia-org/xserver.git
+[submodule "deps/libxcursor"]
+	path = deps/libxcursor
+	url = https://gitlab.freedesktop.org/xorg/lib/libxcursor.git

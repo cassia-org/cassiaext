@@ -282,6 +282,10 @@ add_autotools_project(libxrender deps/libxrender
                       GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh
                       CONFIGURE_FLAGS --enable-malloc0returnsnull
                       DEPENDS libx11 xorgproto)
+add_autotools_project(libxcursor deps/libxcursor
+                      GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh
+                      CONFIGURE_FLAGS --enable-malloc0returnsnull
+                      DEPENDS libx11 xorgproto libxrender libxfixes)
 add_autotools_project(libxext deps/libxext
                       GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh
                       CONFIGURE_FLAGS --enable-malloc0returnsnull
@@ -385,4 +389,4 @@ file(WRITE ${OUTPUT_PREFIX_DIR}/lib/pkgconfig/vulkan.pc
 )
 
 #add_meson_project(gamescope gamescope
-#                  DEPENDS wayland wayland-protocols wlroots vulkan-headers libx11 libxdamage libxcomposite libxrender libxext libxxf86vm libxtst libxres libxt libxmu libxkbcommon)
+#                  DEPENDS wayland wayland-protocols wlroots vulkan-headers libx11 libxdamage libxcomposite libxcursor libxrender libxext libxxf86vm libxtst libxres libxt libxmu libxkbcommon)

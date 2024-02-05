@@ -46,6 +46,7 @@ libxshmfence - libxshmfence-1.3.2
 libxcb-wm - xcb-util-wm-0.4.2
 libandroid-shmem - v0.4
 Vulkan-Headers - v1.3.269
+libxcursor - libXcursor-1.2.1
 ```
 
 Note: The format of the contents within the codeblock is fixed and depended upon by scripts.
