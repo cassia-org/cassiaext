@@ -82,9 +82,6 @@
 [submodule "deps/pixman"]
 	path = deps/pixman
 	url = https://gitlab.freedesktop.org/pixman/pixman.git
-[submodule "deps/wlroots"]
-	path = deps/wlroots
-	url = https://gitlab.freedesktop.org/wlroots/wlroots.git
 [submodule "deps/libxkbfile"]
 	path = deps/libxkbfile
 	url = https://gitlab.freedesktop.org/xorg/lib/libxkbfile.git
@@ -124,3 +121,6 @@
 [submodule "deps/libxcursor"]
 	path = deps/libxcursor
 	url = https://gitlab.freedesktop.org/xorg/lib/libxcursor.git
+[submodule "deps/wlroots"]
+	path = deps/wlroots
+	url = https://gitlab.freedesktop.org/wlroots/wlroots.git

@@ -34,7 +34,6 @@ libxkbcommon - xkbcommon-1.5.0
 
 SDL - release-2.28.3
 pixman - pixman-0.42.2
-wlroots - 0.16.2
 libxkbfile - libxkbfile-1.1.2
 libxfont - libXfont2-2.0.6
 libfontenc - libfontenc-1.1.7
@@ -47,6 +46,7 @@ libxcb-wm - xcb-util-wm-0.4.2
 libandroid-shmem - v0.4
 Vulkan-Headers - v1.3.269
 libxcursor - libXcursor-1.2.1
+wlroots - 0.17.1
 ```
 
 Note: The format of the contents within the codeblock is fixed and depended upon by scripts.
