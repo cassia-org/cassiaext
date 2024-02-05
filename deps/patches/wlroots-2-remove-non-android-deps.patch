@@ -1,38 +1,36 @@
-From ce963f48b06ee0b20219b6cd214fd63039547323 Mon Sep 17 00:00:00 2001
+From eaf460deffc96d59806bc569effd40b60cff0fbe Mon Sep 17 00:00:00 2001
 From: Mark Collins <pixelyion@protonmail.com>
 Date: Sun, 29 Oct 2023 18:47:40 +0000
 Subject: [PATCH 2/3] meson: Remove all non-Android dependencies
 
 ---
  backend/meson.build |  2 +-
- meson.build         | 56 ++++++++++++++++++++++-----------------------
+ meson.build         | 26 --------------------------
  render/meson.build  |  4 ++++
- types/meson.build   |  8 +++----
- 4 files changed, 37 insertions(+), 33 deletions(-)
+ types/meson.build   | 12 ++++++------
+ 4 files changed, 11 insertions(+), 33 deletions(-)
 
 diff --git a/backend/meson.build b/backend/meson.build
-index 71a00dc9..725c28fd 100644
+index ed977d3b..d8113d40 100644
 --- a/backend/meson.build
 +++ b/backend/meson.build
-@@ -15,7 +15,7 @@ foreach backend : all_backends
+@@ -25,5 +25,5 @@ foreach backend : all_backends
  endforeach
  
  subdir('multi')
 -subdir('wayland')
 +#subdir('wayland')
  subdir('headless')
- 
- subdir('session')
 diff --git a/meson.build b/meson.build
-index 7988f025..511759d8 100644
+index 5e7da3bc..3c776bd7 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -106,42 +106,42 @@ wayland_server = dependency('wayland-server',
+@@ -108,27 +108,6 @@ wayland_server = dependency('wayland-server',
  	default_options: wayland_project_options,
  )
  
 -drm = dependency('libdrm',
--	version: '>=2.4.113',
+-	version: '>=2.4.114',
 -	fallback: 'libdrm',
 -	default_options: [
 -		'intel=disabled',
@@ -52,54 +50,29 @@ index 7988f025..511759d8 100644
 -		'tests=false',
 -	],
 -)
-+# drm = dependency('libdrm',
-+# 	version: '>=2.4.113',
-+# 	fallback: 'libdrm',
-+# 	default_options: [
-+# 		'intel=disabled',
-+# 		'radeon=disabled',
-+# 		'amdgpu=disabled',
-+# 		'nouveau=disabled',
-+# 		'vmwgfx=disabled',
-+# 		'omap=disabled',
-+# 		'exynos=disabled',
-+# 		'freedreno=disabled',
-+# 		'tegra=disabled',
-+# 		'vc4=disabled',
-+# 		'etnaviv=disabled',
-+# 		'cairo-tests=disabled',
-+# 		'man-pages=disabled',
-+# 		'valgrind=disabled',
-+# 		'tests=false',
-+# 	],
-+# )
- xkbcommon = dependency('xkbcommon')
--udev = dependency('libudev')
-+# udev = dependency('libudev')
- pixman = dependency('pixman-1')
+ xkbcommon = dependency(
+ 	'xkbcommon',
+ 	fallback: 'libxkbcommon',
+@@ -144,17 +123,12 @@ pixman = dependency('pixman-1',
+ 	fallback: 'pixman',
+ 	default_options: ['werror=false'],
+ )
 -math = cc.find_library('m')
 -rt = cc.find_library('rt')
-+# math = cc.find_library('m')
-+# rt = cc.find_library('rt')
  
  wlr_files = []
  wlr_deps = [
  	wayland_server,
 -	drm,
-+	# drm,
  	xkbcommon,
--	udev,
-+	# udev,
  	pixman,
 -	math,
 -	rt,
-+	# math,
-+	# rt,
  ]
  
  subdir('protocol')
 diff --git a/render/meson.build b/render/meson.build
-index c8c6032f..b4a4c9db 100644
+index f09905c7..1c9d2fd3 100644
 --- a/render/meson.build
 +++ b/render/meson.build
 @@ -5,6 +5,10 @@ elif 'auto' in renderers and get_option('auto_features').disabled()
@@ -114,37 +87,42 @@ index c8c6032f..b4a4c9db 100644
  	'dmabuf.c',
  	'drm_format_set.c',
 diff --git a/types/meson.build b/types/meson.build
-index 853d31c7..adea171e 100644
+index ba41e3e2..a8c99f73 100644
 --- a/types/meson.build
 +++ b/types/meson.build
-@@ -37,7 +37,6 @@ wlr_files += files(
- 	'wlr_cursor.c',
+@@ -37,10 +37,8 @@ wlr_files += files(
+ 	'wlr_compositor.c',
+ 	'wlr_content_type_v1.c',
+ 	'wlr_cursor_shape_v1.c',
+-	'wlr_cursor.c',
  	'wlr_damage_ring.c',
  	'wlr_data_control_v1.c',
 -	'wlr_drm.c',
  	'wlr_export_dmabuf_v1.c',
  	'wlr_foreign_toplevel_management_v1.c',
  	'wlr_fullscreen_shell_v1.c',
-@@ -52,7 +51,6 @@ wlr_files += files(
+@@ -54,7 +52,6 @@ wlr_files += files(
  	'wlr_keyboard_group.c',
  	'wlr_keyboard_shortcuts_inhibit_v1.c',
  	'wlr_layer_shell_v1.c',
 -	'wlr_linux_dmabuf_v1.c',
  	'wlr_matrix.c',
- 	'wlr_output_damage.c',
+ 	'wlr_output_layer.c',
  	'wlr_output_layout.c',
-@@ -66,10 +64,8 @@ wlr_files += files(
+@@ -68,12 +65,9 @@ wlr_files += files(
  	'wlr_primary_selection.c',
  	'wlr_region.c',
  	'wlr_relative_pointer_v1.c',
 -	'wlr_screencopy_v1.c',
+ 	'wlr_security_context_v1.c',
  	'wlr_server_decoration.c',
  	'wlr_session_lock_v1.c',
+-	'wlr_shm.c',
 -	'wlr_single_pixel_buffer_v1.c',
  	'wlr_subcompositor.c',
+ 	'wlr_fractional_scale_v1.c',
  	'wlr_switch.c',
- 	'wlr_tablet_pad.c',
-@@ -90,6 +86,10 @@ wlr_files += files(
+@@ -96,6 +90,12 @@ wlr_files += files(
  
  if features.get('drm-backend')
  	wlr_files += files(
@@ -153,6 +131,8 @@ index 853d31c7..adea171e 100644
 +		'wlr_linux_dmabuf_v1.c',
 +		'wlr_screencopy_v1.c',
 +		'wlr_single_pixel_buffer_v1.c',
++		'wlr_cursor.c',
++		'wlr_shm.c',
  	)
  endif
 -- 

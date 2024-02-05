@@ -1,16 +1,17 @@
-From 885364ebd039ab507cd29df263681f53d1a48177 Mon Sep 17 00:00:00 2001
+From 493085c81584f90685dcf71cdc37fa45d91c9173 Mon Sep 17 00:00:00 2001
 From: Mark Collins <pixelyion@protonmail.com>
 Date: Sun, 29 Oct 2023 18:49:19 +0000
 Subject: [PATCH 3/3] types/output: Remove DRM dependency
 
 ---
- types/output/cursor.c | 2 +-
- types/output/output.c | 2 +-
- types/output/render.c | 9 +++++++--
- 3 files changed, 9 insertions(+), 4 deletions(-)
+ types/output/cursor.c    | 2 +-
+ types/output/output.c    | 2 +-
+ types/output/render.c    | 3 +--
+ types/output/swapchain.c | 8 ++++++--
+ 4 files changed, 9 insertions(+), 6 deletions(-)
 
 diff --git a/types/output/cursor.c b/types/output/cursor.c
-index 927536ad..91e6683c 100644
+index ad37a048..f0c08554 100644
 --- a/types/output/cursor.c
 +++ b/types/output/cursor.c
 @@ -1,5 +1,5 @@
@@ -19,9 +20,9 @@ index 927536ad..91e6683c 100644
 +#define DRM_FORMAT_ARGB8888 UINT32_MAX
  #include <stdlib.h>
  #include <wlr/interfaces/wlr_output.h>
- #include <wlr/render/wlr_renderer.h>
+ #include <wlr/render/swapchain.h>
 diff --git a/types/output/output.c b/types/output/output.c
-index 9a2e5515..642792ed 100644
+index af2fab5e..6396c12e 100644
 --- a/types/output/output.c
 +++ b/types/output/output.c
 @@ -1,7 +1,7 @@
@@ -32,18 +33,34 @@ index 9a2e5515..642792ed 100644
 +#define DRM_FORMAT_XRGB8888 UINT32_MAX
  #include <stdlib.h>
  #include <wlr/interfaces/wlr_output.h>
- #include <wlr/types/wlr_compositor.h>
+ #include <wlr/render/swapchain.h>
 diff --git a/types/output/render.c b/types/output/render.c
-index 5d4dccc1..eddd9314 100644
+index acc6f6b0..1ec3cdb9 100644
 --- a/types/output/render.c
 +++ b/types/output/render.c
-@@ -1,10 +1,15 @@
+@@ -1,11 +1,10 @@
  #include <assert.h>
 -#include <drm_fourcc.h>
 +#define DRM_FORMAT_INVALID UINT32_MAX
  #include <stdlib.h>
  #include <wlr/interfaces/wlr_output.h>
  #include <wlr/render/interface.h>
+ #include <wlr/render/swapchain.h>
+ #include <wlr/util/log.h>
+-#include <xf86drm.h>
+ #include "backend/backend.h"
+ #include "render/allocator/allocator.h"
+ #include "render/drm_format_set.h"
+diff --git a/types/output/swapchain.c b/types/output/swapchain.c
+index 5a16610d..17c54d11 100644
+--- a/types/output/swapchain.c
++++ b/types/output/swapchain.c
+@@ -1,10 +1,14 @@
+ #include <assert.h>
+-#include <drm_fourcc.h>
+ #include <stdlib.h>
+ #include <wlr/render/allocator.h>
+ #include <wlr/render/swapchain.h>
  #include <wlr/util/log.h>
 -#include <xf86drm.h>
 +#define DRM_FORMAT_MOD_LINEAR 1
@@ -52,9 +69,9 @@ index 5d4dccc1..eddd9314 100644
 +static char *drmGetFormatName(uint32_t format) {
 +	return NULL;
 +}
- #include "backend/backend.h"
- #include "render/allocator/allocator.h"
+ 
  #include "render/drm_format_set.h"
+ #include "types/wlr_output.h"
 -- 
 2.42.0
 

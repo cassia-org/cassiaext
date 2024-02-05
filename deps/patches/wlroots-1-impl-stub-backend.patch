@@ -1,4 +1,4 @@
-From 86414c6d73f61abd04c8bb6e976f017975f86e58 Mon Sep 17 00:00:00 2001
+From 2dc924a81b2a75eac35075abb36b58a359ac1965 Mon Sep 17 00:00:00 2001
 From: Mark Collins <pixelyion@protonmail.com>
 Date: Sun, 29 Oct 2023 18:46:58 +0000
 Subject: [PATCH 1/3] backend/session: Implement stubbed backend session
@@ -7,39 +7,57 @@ Certain platforms such as Android don't require session management
 as they operate off a single session, in these cases libseat isn't
 required and the session code can be stubbed.
 ---
- backend/session/meson.build    | 20 +++++---
+ backend/session/meson.build    | 39 +++++++++------
  backend/session/stub_session.c | 90 ++++++++++++++++++++++++++++++++++
- include/wlr/backend/session.h  |  1 -
  meson_options.txt              |  1 +
- 4 files changed, 104 insertions(+), 8 deletions(-)
+ 3 files changed, 114 insertions(+), 16 deletions(-)
  create mode 100644 backend/session/stub_session.c
 
 diff --git a/backend/session/meson.build b/backend/session/meson.build
-index 27915506..657e3221 100644
+index 4c20ee9d..679c61d7 100644
 --- a/backend/session/meson.build
 +++ b/backend/session/meson.build
-@@ -1,7 +1,13 @@
--libseat = dependency('libseat',
+@@ -1,17 +1,24 @@
+-msg = 'Required for session support.'
+-udev = dependency('libudev', required: session_required, not_found_message: msg)
+-libseat = dependency(
+-	'libseat',
 -	version: '>=0.2.0',
 -	fallback: 'seatd',
--	default_options: ['server=disabled', 'man-pages=disabled'],
+-	default_options: ['server=disabled', 'man-pages=disabled', 'examples=disabled'],
+-	required: session_required,
+-	not_found_message: msg,
 -)
--wlr_files += files('session.c')
--wlr_deps += libseat
+-if not (udev.found() and libseat.found())
+-	subdir_done()
+-endif
 +stub_session = get_option('stub_session')
 +
 +if stub_session
 +	wlr_files += files('stub_session.c')
++	features += { 'session': true }
 +else
-+	libseat = dependency('libseat',
++	msg = 'Required for session support.'
++	udev = dependency('libudev', required: session_required, not_found_message: msg)
++	libseat = dependency(
++		'libseat',
 +		version: '>=0.2.0',
 +		fallback: 'seatd',
-+		default_options: ['server=disabled', 'man-pages=disabled'],
++		default_options: ['server=disabled', 'man-pages=disabled', 'examples=disabled'],
++		required: session_required,
++		not_found_message: msg,
 +	)
++	if not (udev.found() and libseat.found())
++		subdir_done()
++	endif
+ 
+-wlr_files += files('session.c')
+-wlr_deps += [udev, libseat]
+-features += { 'session': true }
 +	wlr_files += files('session.c')
-+	wlr_deps += libseat
++	wlr_deps += [udev, libseat]
++	features += { 'session': true }
 +endif
-\ No newline at end of file
 diff --git a/backend/session/stub_session.c b/backend/session/stub_session.c
 new file mode 100644
 index 00000000..8f40d2e1
@@ -136,29 +154,18 @@ index 00000000..8f40d2e1
 +	wlr_log_errno(WLR_ERROR, "Finding GPUs on stubbed session");
 +	return -1;
 +}
-diff --git a/include/wlr/backend/session.h b/include/wlr/backend/session.h
-index e5deda57..3583b317 100644
---- a/include/wlr/backend/session.h
-+++ b/include/wlr/backend/session.h
-@@ -1,7 +1,6 @@
- #ifndef WLR_BACKEND_SESSION_H
- #define WLR_BACKEND_SESSION_H
- 
--#include <libudev.h>
- #include <stdbool.h>
- #include <sys/types.h>
- #include <wayland-server-core.h>
 diff --git a/meson_options.txt b/meson_options.txt
-index 1a439a4d..540c7fad 100644
+index 6977643c..c8156faa 100644
 --- a/meson_options.txt
 +++ b/meson_options.txt
-@@ -4,5 +4,6 @@ option('examples', type: 'boolean', value: true, description: 'Build example app
+@@ -4,6 +4,7 @@ option('examples', type: 'boolean', value: true, description: 'Build example app
  option('icon_directory', description: 'Location used to look for cursors (default: ${datadir}/icons)', type: 'string', value: '')
  option('renderers', type: 'array', choices: ['auto', 'gles2', 'vulkan'], value: ['auto'], description: 'Select built-in renderers')
  option('backends', type: 'array', choices: ['auto', 'drm', 'libinput', 'x11'], value: ['auto'], description: 'Select built-in backends')
 +option('stub_session', type: 'boolean', value: false, description: 'Stub out session management')
  option('allocators', type: 'array', choices: ['auto', 'gbm'], value: ['auto'],
  	description: 'Select built-in allocators')
+ option('session', type: 'feature', value: 'auto', description: 'Enable session support')
 -- 
 2.42.0
 
