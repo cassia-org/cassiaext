@@ -28,6 +28,8 @@ if (CMAKE_CXX_FLAGS)
     string(REPLACE "-fstack-protector-strong" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     string(REPLACE "-D_FORTIFY_SOURCE=2" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     string(REPLACE "-Werror=format-security" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+    # Fixes building on newer Android NDK for some projects.
+    string(APPEND CMAKE_CXX_FLAGS " -Wno-implicit-function-declaration")
     set(CMAKE_C_FLAGS ${CMAKE_CXX_FLAGS})
     set(CMAKE_ASM_FLAGS ${CMAKE_CXX_FLAGS})
 endif()
@@ -382,5 +384,5 @@ file(WRITE ${OUTPUT_PREFIX_DIR}/lib/pkgconfig/vulkan.pc
   "Cflags: -I${OUTPUT_PREFIX_DIR}/include\n"
 )
 
-add_meson_project(gamescope gamescope
-                  DEPENDS wayland wayland-protocols wlroots vulkan-headers libx11 libxdamage libxcomposite libxrender libxext libxxf86vm libxtst libxres libxt libxmu libxkbcommon)
+#add_meson_project(gamescope gamescope
+#                  DEPENDS wayland wayland-protocols wlroots vulkan-headers libx11 libxdamage libxcomposite libxrender libxext libxxf86vm libxtst libxres libxt libxmu libxkbcommon)
