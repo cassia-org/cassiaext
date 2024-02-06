@@ -388,5 +388,6 @@ file(WRITE ${OUTPUT_PREFIX_DIR}/lib/pkgconfig/vulkan.pc
   "Cflags: -I${OUTPUT_PREFIX_DIR}/include\n"
 )
 
-#add_meson_project(gamescope gamescope
-#                  DEPENDS wayland wayland-protocols wlroots vulkan-headers libx11 libxdamage libxcomposite libxcursor libxrender libxext libxxf86vm libxtst libxres libxt libxmu libxkbcommon)
+add_meson_project(gamescope gamescope
+                  CONFIGURE_FLAGS --force-fallback-for vkroots -Denable_openvr_support=false
+                  DEPENDS wayland wayland-protocols wlroots vulkan-headers libx11 libxdamage libxcomposite libxcursor libxrender libxext libxxf86vm libxtst libxres libxt libxmu libxkbcommon)
