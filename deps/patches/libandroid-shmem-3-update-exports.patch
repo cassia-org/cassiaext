@@ -1,0 +1,27 @@
+From 03c2baaf295cad6c332d9b29f8d34c7be9144a32 Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Sat, 10 Feb 2024 10:26:32 +0000
+Subject: [PATCH] Update `exports.txt` for POSIX SHM
+
+---
+ exports.txt | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/exports.txt b/exports.txt
+index 2640f41..f46934d 100644
+--- a/exports.txt
++++ b/exports.txt
+@@ -9,5 +9,10 @@
+ 		shmat;
+ 		shmdt;
+ 
++		libandroid_shm_open;
++		libandroid_shm_unlink;
++		shm_open;
++		shm_unlink;
++
+ 	local: *;         # hide everything else
+ };
+-- 
+2.42.0
+
