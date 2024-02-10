@@ -1,6 +1,6 @@
 [submodule "gamescope"]
 	path = gamescope
-	url = git@github.com:cassia-org/gamescope.git
+	url = git@github.com:ValveSoftware/gamescope.git
 [submodule "deps/libx11"]
 	path = deps/libx11
 	url = https://gitlab.freedesktop.org/xorg/lib/libx11.git
