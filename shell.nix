@@ -19,5 +19,6 @@ pkgs.mkShell {
     bison
     glslang
     jq
+    hwdata
   ];
 }
