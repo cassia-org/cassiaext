@@ -92,7 +92,7 @@ for dep in deps:
         exit(1)
 
     # Ensure there's no uncommitted changes
-    status = subprocess.run(["git", "status", "--porcelain=v1"], cwd=os.path.join(script_dir, dep.name), capture_output=True, text=True)
+    status = subprocess.run(["git", "status", "-uno", "--porcelain=v1"], cwd=os.path.join(script_dir, dep.name), capture_output=True, text=True)
     if (status.returncode != 0):
         print(f"Error: Failed to check status for {dep.name}")
         exit(1)
