@@ -1,0 +1,293 @@
+From d8796fb93dec435c099d7dc7252f1105c3df4591 Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Sat, 10 Feb 2024 11:08:22 +0000
+Subject: [PATCH 4/4] render: Remove DRM-specific code paths
+
+---
+ render/allocator/allocator.c | 111 ---------------------------------
+ render/allocator/meson.build |   2 +-
+ render/wlr_renderer.c        | 115 +----------------------------------
+ 3 files changed, 2 insertions(+), 226 deletions(-)
+
+diff --git a/render/allocator/allocator.c b/render/allocator/allocator.c
+index f71902f2..b2db987a 100644
+--- a/render/allocator/allocator.c
++++ b/render/allocator/allocator.c
+@@ -29,120 +29,9 @@ void wlr_allocator_init(struct wlr_allocator *alloc,
+ 	wl_signal_init(&alloc->events.destroy);
+ }
+ 
+-/* Re-open the DRM node to avoid GEM handle ref'counting issues. See:
+- * https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
+- */
+-static int reopen_drm_node(int drm_fd, bool allow_render_node) {
+-	if (drmIsMaster(drm_fd)) {
+-		// Only recent kernels support empty leases
+-		uint32_t lessee_id;
+-		int lease_fd = drmModeCreateLease(drm_fd, NULL, 0, O_CLOEXEC, &lessee_id);
+-		if (lease_fd >= 0) {
+-			return lease_fd;
+-		} else if (lease_fd != -EINVAL && lease_fd != -EOPNOTSUPP) {
+-			wlr_log_errno(WLR_ERROR, "drmModeCreateLease failed");
+-			return -1;
+-		}
+-		wlr_log(WLR_DEBUG, "drmModeCreateLease failed, "
+-			"falling back to plain open");
+-	}
+-
+-	char *name = NULL;
+-	if (allow_render_node) {
+-		name = drmGetRenderDeviceNameFromFd(drm_fd);
+-	}
+-	if (name == NULL) {
+-		// Either the DRM device has no render node, either the caller wants
+-		// a primary node
+-		name = drmGetDeviceNameFromFd2(drm_fd);
+-		if (name == NULL) {
+-			wlr_log(WLR_ERROR, "drmGetDeviceNameFromFd2 failed");
+-			return -1;
+-		}
+-	}
+-
+-	int new_fd = open(name, O_RDWR | O_CLOEXEC);
+-	if (new_fd < 0) {
+-		wlr_log_errno(WLR_ERROR, "Failed to open DRM node '%s'", name);
+-		free(name);
+-		return -1;
+-	}
+-
+-	free(name);
+-
+-	// If we're using a DRM primary node and we are DRM master (e.g. because
+-	// we're running under the DRM backend), we need to use the legacy DRM
+-	// authentication mechanism to have the permission to manipulate DRM dumb
+-	// buffers.
+-	if (drmIsMaster(drm_fd) && drmGetNodeTypeFromFd(new_fd) == DRM_NODE_PRIMARY) {
+-		drm_magic_t magic;
+-		if (drmGetMagic(new_fd, &magic) < 0) {
+-			wlr_log_errno(WLR_ERROR, "drmGetMagic failed");
+-			close(new_fd);
+-			return -1;
+-		}
+-
+-		if (drmAuthMagic(drm_fd, magic) < 0) {
+-			wlr_log_errno(WLR_ERROR, "drmAuthMagic failed");
+-			close(new_fd);
+-			return -1;
+-		}
+-	}
+-
+-	return new_fd;
+-}
+-
+ struct wlr_allocator *allocator_autocreate_with_drm_fd(
+ 		struct wlr_backend *backend, struct wlr_renderer *renderer,
+ 		int drm_fd) {
+-	uint32_t backend_caps = backend_get_buffer_caps(backend);
+-	uint32_t renderer_caps = renderer_get_render_buffer_caps(renderer);
+-
+-	struct wlr_allocator *alloc = NULL;
+-
+-	uint32_t gbm_caps = WLR_BUFFER_CAP_DMABUF;
+-	if ((backend_caps & gbm_caps) && (renderer_caps & gbm_caps)
+-			&& drm_fd >= 0) {
+-#if WLR_HAS_GBM_ALLOCATOR
+-		wlr_log(WLR_DEBUG, "Trying to create gbm allocator");
+-		int gbm_fd = reopen_drm_node(drm_fd, true);
+-		if (gbm_fd < 0) {
+-			return NULL;
+-		}
+-		if ((alloc = wlr_gbm_allocator_create(gbm_fd)) != NULL) {
+-			return alloc;
+-		}
+-		close(gbm_fd);
+-		wlr_log(WLR_DEBUG, "Failed to create gbm allocator");
+-#else
+-		wlr_log(WLR_DEBUG, "Skipping gbm allocator: disabled at compile-time");
+-#endif
+-	}
+-
+-	uint32_t shm_caps = WLR_BUFFER_CAP_SHM | WLR_BUFFER_CAP_DATA_PTR;
+-	if ((backend_caps & shm_caps) && (renderer_caps & shm_caps)) {
+-		wlr_log(WLR_DEBUG, "Trying to create shm allocator");
+-		if ((alloc = wlr_shm_allocator_create()) != NULL) {
+-			return alloc;
+-		}
+-		wlr_log(WLR_DEBUG, "Failed to create shm allocator");
+-	}
+-
+-	uint32_t drm_caps = WLR_BUFFER_CAP_DMABUF | WLR_BUFFER_CAP_DATA_PTR;
+-	if ((backend_caps & drm_caps) && (renderer_caps & drm_caps)
+-			&& drm_fd >= 0 && drmIsMaster(drm_fd)) {
+-		wlr_log(WLR_DEBUG, "Trying to create drm dumb allocator");
+-		int dumb_fd = reopen_drm_node(drm_fd, false);
+-		if (dumb_fd < 0) {
+-			return NULL;
+-		}
+-		if ((alloc = wlr_drm_dumb_allocator_create(dumb_fd)) != NULL) {
+-			return alloc;
+-		}
+-		close(dumb_fd);
+-		wlr_log(WLR_DEBUG, "Failed to create drm dumb allocator");
+-	}
+-
+ 	wlr_log(WLR_ERROR, "Failed to create allocator");
+ 	return NULL;
+ }
+diff --git a/render/allocator/meson.build b/render/allocator/meson.build
+index 730a2a41..bb47c4ec 100644
+--- a/render/allocator/meson.build
++++ b/render/allocator/meson.build
+@@ -8,7 +8,7 @@ endif
+ wlr_files += files(
+ 	'allocator.c',
+ 	'shm.c',
+-	'drm_dumb.c',
++	# 'drm_dumb.c',
+ )
+ 
+ gbm = disabler()
+diff --git a/render/wlr_renderer.c b/render/wlr_renderer.c
+index 2bdcff5a..eef445c9 100644
+--- a/render/wlr_renderer.c
++++ b/render/wlr_renderer.c
+@@ -228,114 +228,14 @@ bool wlr_renderer_init_wl_display(struct wlr_renderer *r,
+ 		return false;
+ 	}
+ 
+-	if (wlr_renderer_get_dmabuf_texture_formats(r) != NULL &&
+-			wlr_renderer_get_drm_fd(r) >= 0) {
+-		if (wlr_drm_create(wl_display, r) == NULL) {
+-			return false;
+-		}
+-
+-		if (wlr_linux_dmabuf_v1_create_with_renderer(wl_display, 4, r) == NULL) {
+-			return false;
+-		}
+-	}
+-
+ 	return true;
+ }
+ 
+-static int open_drm_render_node(void) {
+-	uint32_t flags = 0;
+-	int devices_len = drmGetDevices2(flags, NULL, 0);
+-	if (devices_len < 0) {
+-		wlr_log(WLR_ERROR, "drmGetDevices2 failed: %s", strerror(-devices_len));
+-		return -1;
+-	}
+-	drmDevice **devices = calloc(devices_len, sizeof(*devices));
+-	if (devices == NULL) {
+-		wlr_log_errno(WLR_ERROR, "Allocation failed");
+-		return -1;
+-	}
+-	devices_len = drmGetDevices2(flags, devices, devices_len);
+-	if (devices_len < 0) {
+-		free(devices);
+-		wlr_log(WLR_ERROR, "drmGetDevices2 failed: %s", strerror(-devices_len));
+-		return -1;
+-	}
+-
+-	int fd = -1;
+-	for (int i = 0; i < devices_len; i++) {
+-		drmDevice *dev = devices[i];
+-		if (dev->available_nodes & (1 << DRM_NODE_RENDER)) {
+-			const char *name = dev->nodes[DRM_NODE_RENDER];
+-			wlr_log(WLR_DEBUG, "Opening DRM render node '%s'", name);
+-			fd = open(name, O_RDWR | O_CLOEXEC);
+-			if (fd < 0) {
+-				wlr_log_errno(WLR_ERROR, "Failed to open '%s'", name);
+-				goto out;
+-			}
+-			break;
+-		}
+-	}
+-	if (fd < 0) {
+-		wlr_log(WLR_ERROR, "Failed to find any DRM render node");
+-	}
+-
+-out:
+-	for (int i = 0; i < devices_len; i++) {
+-		drmFreeDevice(&devices[i]);
+-	}
+-	free(devices);
+-
+-	return fd;
+-}
+-
+ static bool open_preferred_drm_fd(struct wlr_backend *backend, int *drm_fd_ptr,
+ 		bool *own_drm_fd) {
+ 	if (*drm_fd_ptr >= 0) {
+ 		return true;
+ 	}
+-
+-	// Allow the user to override the render node
+-	const char *render_name = getenv("WLR_RENDER_DRM_DEVICE");
+-	if (render_name != NULL) {
+-		wlr_log(WLR_INFO,
+-			"Opening DRM render node '%s' from WLR_RENDER_DRM_DEVICE",
+-			render_name);
+-		int drm_fd = open(render_name, O_RDWR | O_CLOEXEC);
+-		if (drm_fd < 0) {
+-			wlr_log_errno(WLR_ERROR, "Failed to open '%s'", render_name);
+-			return false;
+-		}
+-		if (drmGetNodeTypeFromFd(drm_fd) != DRM_NODE_RENDER) {
+-			wlr_log(WLR_ERROR, "'%s' is not a DRM render node", render_name);
+-			close(drm_fd);
+-			return false;
+-		}
+-		*drm_fd_ptr = drm_fd;
+-		*own_drm_fd = true;
+-		return true;
+-	}
+-
+-	// Prefer the backend's DRM node, if any
+-	int backend_drm_fd = wlr_backend_get_drm_fd(backend);
+-	if (backend_drm_fd >= 0) {
+-		*drm_fd_ptr = backend_drm_fd;
+-		*own_drm_fd = false;
+-		return true;
+-	}
+-
+-	// If the backend hasn't picked a DRM FD, but accepts DMA-BUFs, pick an
+-	// arbitrary render node
+-	uint32_t backend_caps = backend_get_buffer_caps(backend);
+-	if (backend_caps & WLR_BUFFER_CAP_DMABUF) {
+-		int drm_fd = open_drm_render_node();
+-		if (drm_fd < 0) {
+-			return false;
+-		}
+-		*drm_fd_ptr = drm_fd;
+-		*own_drm_fd = true;
+-		return true;
+-	}
+-
+ 	return false;
+ }
+ 
+@@ -344,20 +244,7 @@ static void log_creation_failure(bool is_auto, const char *msg) {
+ }
+ 
+ static bool has_render_node(struct wlr_backend *backend) {
+-	if (!backend) {
+-		return false;
+-	}
+-
+-	int backend_drm_fd = wlr_backend_get_drm_fd(backend);
+-	if (backend_drm_fd < 0) {
+-		return false;
+-	}
+-
+-	char *render_node = drmGetRenderDeviceNameFromFd(backend_drm_fd);
+-	bool has_render_node = render_node != NULL;
+-	free(render_node);
+-
+-	return has_render_node;
++	return false;
+ }
+ 
+ static struct wlr_renderer *renderer_autocreate(struct wlr_backend *backend, int drm_fd) {
+-- 
+2.42.0
+
