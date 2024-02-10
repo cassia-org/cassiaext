@@ -389,5 +389,6 @@ file(WRITE ${OUTPUT_PREFIX_DIR}/lib/pkgconfig/vulkan.pc
 )
 
 add_meson_project(gamescope gamescope
+                  BUILD_ALWAYS TRUE
                   CONFIGURE_FLAGS --force-fallback-for vkroots -Denable_openvr_support=false
                   DEPENDS wayland wayland-protocols wlroots vulkan-headers libx11 libxdamage libxcomposite libxcursor libxrender libxext libxxf86vm libxtst libxres libxt libxmu libxkbcommon)
