@@ -392,3 +392,13 @@ add_meson_project(gamescope gamescope
                   BUILD_ALWAYS TRUE
                   CONFIGURE_FLAGS --force-fallback-for vkroots -Denable_openvr_support=false
                   DEPENDS wayland wayland-protocols wlroots vulkan-headers libx11 libxdamage libxcomposite libxcursor libxrender libxext libxxf86vm libxtst libxres libxt libxmu libxkbcommon)
+
+# Produce a tarball from the prefix directory, this will be packaged into the APK.
+add_custom_target(compress
+  ALL
+  COMMAND tar -czf prefix.tar.gz -C ${OUTPUT_PREFIX_DIR} .
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  COMMENT "Compressing prefix directory"
+  DEPENDS gamescope
+  BYPRODUCTS prefix.tar.gz
+)
