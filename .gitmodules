@@ -124,3 +124,6 @@
 [submodule "deps/wlroots"]
 	path = deps/wlroots
 	url = https://gitlab.freedesktop.org/wlroots/wlroots.git
+[submodule "deps/xkeyboard-config"]
+	path = deps/xkeyboard-config
+	url = https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config.git

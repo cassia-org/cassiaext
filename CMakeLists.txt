@@ -329,6 +329,8 @@ add_autotools_project(libxkbfile deps/libxkbfile
                       GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh
                       DEPENDS libx11 xorgproto)
 
+add_meson_project(xkeyboard-config deps/xkeyboard-config)
+
 add_autotools_project(libfontenc deps/libfontenc
                       GENERATE_COMMAND NOCONFIGURE=1 ./autogen.sh
                       DEPENDS xorgproto)

@@ -20,5 +20,6 @@ pkgs.mkShell {
     glslang
     jq
     hwdata
+    perl
   ];
 }
