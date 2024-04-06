@@ -1,0 +1,36 @@
+From 2c2a95eaea39df14a23bda6fd0023f9d53cadb11 Mon Sep 17 00:00:00 2001
+From: Mark Collins <pixelyion@protonmail.com>
+Date: Sat, 30 Mar 2024 15:10:53 +0000
+Subject: [PATCH] backend: Disable WL backend
+
+---
+ backend/backend.c | 13 ++-----------
+ 1 file changed, 2 insertions(+), 11 deletions(-)
+
+diff --git a/backend/backend.c b/backend/backend.c
+index e5b8db14..fd1b5cad 100644
+--- a/backend/backend.c
++++ b/backend/backend.c
+@@ -148,17 +148,8 @@ static size_t parse_outputs_env(const char *name) {
+ }
+ 
+ static struct wlr_backend *attempt_wl_backend(struct wl_display *display) {
+-	struct wlr_backend *backend = wlr_wl_backend_create(display, NULL);
+-	if (backend == NULL) {
+-		return NULL;
+-	}
+-
+-	size_t outputs = parse_outputs_env("WLR_WL_OUTPUTS");
+-	for (size_t i = 0; i < outputs; ++i) {
+-		wlr_wl_output_create(backend);
+-	}
+-
+-	return backend;
++	wlr_log(WLR_ERROR, "Cannot create WL backend: disabled at compile-time");
++	return NULL;
+ }
+ 
+ static struct wlr_backend *attempt_x11_backend(struct wl_display *display,
+-- 
+2.43.2
+
